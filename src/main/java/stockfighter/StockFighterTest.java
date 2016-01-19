@@ -9,22 +9,107 @@ import java.util.Date;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import stockfighter.pojo.Cancel;
 import stockfighter.pojo.EntityClass;
 import stockfighter.pojo.Heartbeat;
+import stockfighter.pojo.Orders;
+import stockfighter.pojo.OrdersReponse;
 import stockfighter.pojo.Quote;
 
 public class StockFighterTest {
 
 	private final Logger slf4jLogger = LoggerFactory.getLogger(StockFighterTest.class);
-	
+
+	@Test
+	public void testStatusForAllOrders() {
+
+		OrdersReponse ordersReponse = null;
+		HttpResponse httpResponse = null;
+		CloseableHttpClient httpClient = getHttpClient();
+		HttpGet httpGet = new HttpGet(
+				"https://api.stockfighter.io/ob/api/venues/TESTEX/accounts/EXB123456/stocks/FOOBAR/orders");
+		
+		httpGet.addHeader("X-Starfighter-Authorization", "2e5b8ebee62687ec9d8b5c5f619a9fd54053a999");
+
+		try {
+			Date sentDate = new Date();
+			slf4jLogger.info("POST: Requesting status of all orders in a stock. " + sentDate.toString());
+
+			Date receiveDate = new Date();
+			httpResponse = httpClient.execute(httpGet);
+			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+					+ " milliseconds to fulfill request.");
+
+			if (httpResponse.getStatusLine().getStatusCode() != 200) {
+				throw new RuntimeException(
+						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+			}
+
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		ordersReponse = (OrdersReponse) parseReponse(httpResponse, OrdersReponse.class);
+
+		assertNotNull(ordersReponse);
+		assertEquals(ordersReponse.getClass(), OrdersReponse.class);
+
+	}
+
+	@Test
+	@Ignore
+	public void testCancel() {
+
+		Cancel cancel = null;
+		HttpResponse httpResponse = null;
+		CloseableHttpClient httpClient = getHttpClient();
+		HttpDelete httpDelete = new HttpDelete("https://api.stockfighter.io/ob/api/venues/ROBUST/stocks/ROBO/orders/1");
+
+		try {
+			Date sentDate = new Date();
+			slf4jLogger.info("DELETE: Requesting Delete information. " + sentDate.toString());
+
+			Date receiveDate = new Date();
+			httpResponse = httpClient.execute(httpDelete);
+
+			if (httpResponse.getStatusLine().getStatusCode() != 200) {
+				slf4jLogger.error("Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+				throw new RuntimeException(
+						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+			} else {
+				slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+						+ " milliseconds to cancel an order.");
+			}
+
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		cancel = (Cancel) parseReponse(httpResponse, Cancel.class);
+
+		assertNotNull(cancel);
+		assertEquals(cancel.getClass(), Cancel.class);
+
+	}
+
 	@Test
 	public void testHeartbeat() {
 
@@ -36,11 +121,12 @@ public class StockFighterTest {
 		try {
 			Date sentDate = new Date();
 			slf4jLogger.info("POST: Requesting hearbeat information. " + sentDate.toString());
-			
+
 			Date receiveDate = new Date();
 			httpResponse = httpClient.execute(httpGet);
-			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime()) + " milliseconds to fulfill request.");
-			
+			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+					+ " milliseconds to fulfill request.");
+
 			if (httpResponse.getStatusLine().getStatusCode() != 200) {
 				throw new RuntimeException(
 						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
@@ -58,7 +144,7 @@ public class StockFighterTest {
 
 		assertNotNull(heartbeat);
 		assertEquals(heartbeat.getClass(), Heartbeat.class);
-	
+
 	}
 
 	private Quote testQuote() {
