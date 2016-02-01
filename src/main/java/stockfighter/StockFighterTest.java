@@ -64,11 +64,11 @@ public class StockFighterTest {
 			}
 		});
 	}
-	
+
 	@After
-    public void tearDown() throws Exception {
-        injector = null;
-    }
+	public void tearDown() throws Exception {
+		injector = null;
+	}
 
 	@Test
 	public void testVenueUp() throws URISyntaxException {
@@ -80,48 +80,11 @@ public class StockFighterTest {
 	public void testOrderBookForStock() throws URISyntaxException, JsonParseException, JsonMappingException,
 			UnsupportedOperationException, IOException {
 
-		Orderbook orderbook = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
+		Orderbook orderBookForStock = injector.getInstance(StockfighterService.class).orderBookForStock("TESTEX",
+				"FOOBAR");
 
-		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
-		nameValuePairs.add(new BasicNameValuePair("venues", "TESTEX"));
-		nameValuePairs.add(new BasicNameValuePair("stocks", "FOOBAR"));
-
-		// final URIBuilder builder = new URIBuilder();
-		// URI uri =
-		// builder.setScheme("https").setHost("api.stockfighter.io").setPath("/ob/api")
-		// .addParameters(nameValuePairs).build();
-
-		HttpGet httpGet = new HttpGet("https://api.stockfighter.io/ob/api/venues/TESTEX/stocks/FOOBAR");
-
-		try {
-			Date sentDate = new Date();
-			slf4jLogger.info("POST: Requesting status of all orders in a stock. " + sentDate.toString());
-
-			Date receiveDate = new Date();
-			httpResponse = httpClient.execute(httpGet);
-			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
-					+ " milliseconds to fulfill request.");
-
-			if (httpResponse.getStatusLine().getStatusCode() != 200) {
-				throw new RuntimeException(
-						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
-			}
-
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		orderbook = (Orderbook) parseReponse(httpResponse, Orderbook.class);
-
-		assertNotNull(orderbook);
-		assertEquals(orderbook.getClass(), Orderbook.class);
-
+		assertNotNull(orderBookForStock);
+		assertEquals(Orderbook.class, orderBookForStock.getClass());
 	}
 
 	@Test
