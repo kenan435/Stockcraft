@@ -70,6 +70,49 @@ public class StockfighterService implements IStockFighterService {
 
 		return venueResponse.isOk();
 	}
+	
+	@Override
+	public Orderbook orderBookForStock(String venue, String stock) throws URISyntaxException {
+
+		Orderbook orderbook = null;
+		HttpResponse httpResponse = null;
+		CloseableHttpClient httpClient = getHttpClient();
+
+		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+		nameValuePairs.add(new BasicNameValuePair("venues", venue));
+		nameValuePairs.add(new BasicNameValuePair("stocks", stock));
+
+		final URIBuilder builder = new URIBuilder();
+		URI uri = builder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs).build();
+
+		HttpGet httpGet = new HttpGet(encodeURI(uri));
+
+		try {
+			Date sentDate = new Date();
+			slf4jLogger.info("POST: Requesting status of all orders in a stock. " + sentDate.toString() + " >>> " + encodeURI(uri));			
+
+			Date receiveDate = new Date();
+			httpResponse = httpClient.execute(httpGet);
+			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+					+ " milliseconds to fulfill request.");
+
+			if (httpResponse.getStatusLine().getStatusCode() != 200) {
+				throw new RuntimeException(
+						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+			}
+
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		orderbook = (Orderbook) parseReponse(httpResponse, Orderbook.class);
+
+		return orderbook;
+	}
 
 	private static String encodeURI(URI uri) {
 
@@ -97,49 +140,6 @@ public class StockfighterService implements IStockFighterService {
 
 		return HttpClientBuilder.create().build();
 
-	}
-
-	@Override
-	public Orderbook orderBookForStock(String venue, String stock) throws URISyntaxException {
-
-		Orderbook orderbook = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
-
-		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
-		nameValuePairs.add(new BasicNameValuePair("venues", venue));
-		nameValuePairs.add(new BasicNameValuePair("stocks", stock));
-
-		final URIBuilder builder = new URIBuilder();
-		URI uri = builder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs).build();
-
-		HttpGet httpGet = new HttpGet(encodeURI(uri));
-
-		try {
-			Date sentDate = new Date();
-			slf4jLogger.info("POST: Requesting status of all orders in a stock. " + sentDate.toString());
-
-			Date receiveDate = new Date();
-			httpResponse = httpClient.execute(httpGet);
-			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
-					+ " milliseconds to fulfill request.");
-
-			if (httpResponse.getStatusLine().getStatusCode() != 200) {
-				throw new RuntimeException(
-						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
-			}
-
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		orderbook = (Orderbook) parseReponse(httpResponse, Orderbook.class);
-
-		return orderbook;
 	}
 
 }
