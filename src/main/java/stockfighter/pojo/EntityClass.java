@@ -1,5 +1,5 @@
 package stockfighter.pojo;
 
-public class EntityClass {
-
+public interface EntityClass {
+	// marker interface
 }

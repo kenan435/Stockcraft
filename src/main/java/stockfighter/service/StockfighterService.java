@@ -8,31 +8,241 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.commons.io.output.ThresholdingOutputStream;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+import org.codehaus.jackson.JsonGenerationException;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
+
 import stockfighter.pojo.EntityClass;
+import stockfighter.pojo.Heartbeat;
+import stockfighter.pojo.Order;
+import stockfighter.pojo.OrderResponse;
 import stockfighter.pojo.Orderbook;
+import stockfighter.pojo.Quote;
 import stockfighter.pojo.VenueResponse;
 
+/**
+ * Service class implementing the IStockFighterService
+ * 
+ * @author kenan
+ *
+ */
 public class StockfighterService implements IStockFighterService {
 
 	final Logger slf4jLogger = LoggerFactory.getLogger(StockfighterService.class);
 
-	public boolean isVenueUp(String venue) throws URISyntaxException {
+	public void startLevel() throws URISyntaxException {
+
+		final String path = "/gm/levels/first_steps";
+
+		OrderResponse orderResponse = null;
+		HttpResponse httpResponse = null;
+		CloseableHttpClient httpClient = getHttpClient();
+
+		URIBuilder uriBuilder = new URIBuilder();
+		URI uri = uriBuilder.setScheme(SCHEMA).setHost(HOST).setPath(path).build();
+
+		HttpPost post = new HttpPost(encodeURI(uri));
+		post.addHeader("X-Starfighter-Authorization", API_KEY);
+
+		try {
+			Date sentDate = new Date();
+			slf4jLogger.info("POST: Place order for stock. " + sentDate.toString());
+
+			Date receiveDate = new Date();
+			httpResponse = httpClient.execute(post);
+			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+					+ " milliseconds to fulfill request.");
+
+			if (httpResponse.getStatusLine().getStatusCode() != 200) {
+				throw new RuntimeException(
+						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+			}
+
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		// orderResponse = (OrderResponse) parseReponse(httpResponse,
+		// OrderResponse.class);
+	}
+
+	@Override
+	public OrderResponse placeOrderForStock(Order order)
+			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
+
+		OrderResponse orderResponse = null;
+		HttpResponse httpResponse = null;
+		CloseableHttpClient httpClient = getHttpClient();
+
+		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+		nameValuePairs.add(new BasicNameValuePair("account", order.getAccount()));
+		nameValuePairs.add(new BasicNameValuePair("venues", order.getVenue()));
+		nameValuePairs.add(new BasicNameValuePair("stocks", order.getStock()));
+		nameValuePairs.add(new BasicNameValuePair("price", Integer.toString(order.getPrice())));
+		nameValuePairs.add(new BasicNameValuePair("qty", Integer.toString(order.getQty())));
+		nameValuePairs.add(new BasicNameValuePair("direction", order.getDirection().toString()));
+		nameValuePairs.add(new BasicNameValuePair("orderType", order.getOrderType().toString()));
+
+		Gson gson = new Gson();
+		StringEntity entity = new StringEntity(gson.toJson(order));
+
+		// https://api.stockfighter.io/ob/api/venues/TESTEX/stocks/FOOBAR/orders
+
+		URIBuilder uriBuilder = new URIBuilder();
+		URI uri = uriBuilder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs)
+				.setFragment("orders").build();
+
+		HttpPost post = new HttpPost(encodeURI(uri));
+		post.setEntity(entity);
+		post.addHeader("X-Starfighter-Authorization", API_KEY);
+
+		try {
+			Date sentDate = new Date();
+			slf4jLogger.info("POST: Place order for stock. " + sentDate.toString());
+
+			Date receiveDate = new Date();
+			httpResponse = httpClient.execute(post);
+			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+					+ " milliseconds to fulfill request.");
+
+			if (httpResponse.getStatusLine().getStatusCode() != 200) {
+				throw new RuntimeException(
+						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+			}
+
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		orderResponse = (OrderResponse) parseReponse(httpResponse, OrderResponse.class);
+
+		return orderResponse;
+	}
+
+	/**
+	 * Get a quick look at the most recent trade information for a stock.
+	 * 
+	 * @param venue
+	 * @param stock
+	 * @return a quote object
+	 * @throws URISyntaxException
+	 * @throws JsonGenerationException
+	 * @throws JsonMappingException
+	 * @throws IOException
+	 */
+	public Quote getQuote(String venue, String stock)
+			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
+
+		Quote quote = null;
+		HttpResponse httpResponse = null;
+		CloseableHttpClient httpClient = getHttpClient();
+
+		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+		nameValuePairs.add(new BasicNameValuePair("venues", venue));
+		nameValuePairs.add(new BasicNameValuePair("stocks", stock));
+
+		final URIBuilder builder = new URIBuilder();
+		URI uri = builder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs)
+				.setFragment("quote").build();
+
+		HttpGet httpGet = new HttpGet(encodeURI(uri));
+
+		try {
+			Date sentDate = new Date();
+			slf4jLogger.info("POST: Requesting Quote information. " + sentDate.toString());
+
+			Date receiveDate = new Date();
+			httpResponse = httpClient.execute(httpGet);
+			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+					+ " milliseconds to fulfill request.");
+
+			if (httpResponse.getStatusLine().getStatusCode() != 200) {
+				throw new RuntimeException(
+						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+			}
+
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		quote = (Quote) parseReponse(httpResponse, Quote.class);
+
+		return quote;
+	}
+
+	public boolean getHearBeat() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
+
+		Heartbeat heartbeat = null;
+		HttpResponse httpResponse = null;
+		CloseableHttpClient httpClient = getHttpClient();
+		final URIBuilder builder = new URIBuilder();
+		URI uri = builder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).setFragment("heartbeat").build();
+
+		HttpGet httpGet = new HttpGet(encodeURI(uri));
+
+		try {
+			Date sentDate = new Date();
+			slf4jLogger.info("POST: Requesting hearbeat information. " + sentDate.toString());
+
+			Date receiveDate = new Date();
+			httpResponse = httpClient.execute(httpGet);
+			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+					+ " milliseconds to fulfill request.");
+
+			if (httpResponse.getStatusLine().getStatusCode() != 200) {
+				throw new RuntimeException(
+						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+			}
+
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		heartbeat = (Heartbeat) parseReponse(httpResponse, Heartbeat.class);
+
+		return heartbeat.getOk();
+	}
+
+	public boolean isVenueUp(String venue)
+			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		VenueResponse venueResponse = null;
 		HttpResponse httpResponse = null;
+		HttpEntity httpEntity = null;
 		CloseableHttpClient httpClient = getHttpClient();
 
 		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
@@ -50,6 +260,9 @@ public class StockfighterService implements IStockFighterService {
 
 			Date receiveDate = new Date();
 			httpResponse = httpClient.execute(httpGet);
+			HttpEntity httpEntity2 = httpResponse.getEntity();
+			EntityUtils.toString(httpEntity2);
+			httpResponse.setEntity(httpEntity2);
 			slf4jLogger
 					.info("RESPONSE: Received in " + (receiveDate.getTime() - sentDate.getTime()) + " milliseconds.");
 
@@ -70,9 +283,10 @@ public class StockfighterService implements IStockFighterService {
 
 		return venueResponse.isOk();
 	}
-	
+
 	@Override
-	public Orderbook orderBookForStock(String venue, String stock) throws URISyntaxException {
+	public Orderbook getOrderBookForStock(String venue, String stock)
+			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		Orderbook orderbook = null;
 		HttpResponse httpResponse = null;
@@ -89,7 +303,8 @@ public class StockfighterService implements IStockFighterService {
 
 		try {
 			Date sentDate = new Date();
-			slf4jLogger.info("POST: Requesting status of all orders in a stock. " + sentDate.toString() + " >>> " + encodeURI(uri));			
+			slf4jLogger.info("POST: Requesting status of all orders in a stock. " + sentDate.toString() + " >>> "
+					+ encodeURI(uri));
 
 			Date receiveDate = new Date();
 			httpResponse = httpClient.execute(httpGet);
@@ -121,7 +336,8 @@ public class StockfighterService implements IStockFighterService {
 
 	}
 
-	private static EntityClass parseReponse(HttpResponse httpResponse, Class<? extends EntityClass> clazz) {
+	private static EntityClass parseReponse(HttpResponse httpResponse, Class<? extends EntityClass> clazz)
+			throws JsonGenerationException, JsonMappingException, IOException {
 
 		EntityClass entityClass = null;
 		ObjectMapper objectMapper = new ObjectMapper();

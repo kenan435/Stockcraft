@@ -6,7 +6,7 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class Cancel extends EntityClass{
+public class Cancel implements EntityClass {
 
 	private String venue;
 	private boolean ok;
@@ -20,12 +20,8 @@ public class Cancel extends EntityClass{
 	private String account;
 	private Date ts;
 	private List<Fills> fills;
-	
+
 	private int totalFilled;
 	private boolean open;
-
-	public Cancel() {
-		// TODO Auto-generated constructor stub
-	}
 
 }

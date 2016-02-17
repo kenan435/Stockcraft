@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
+import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -36,8 +38,12 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 import stockfighter.pojo.Cancel;
+import stockfighter.pojo.Direction;
 import stockfighter.pojo.EntityClass;
 import stockfighter.pojo.Heartbeat;
+import stockfighter.pojo.Order;
+import stockfighter.pojo.OrderResponse;
+import stockfighter.pojo.OrderTypes;
 import stockfighter.pojo.Orderbook;
 import stockfighter.pojo.OrdersReponse;
 import stockfighter.pojo.Quote;
@@ -48,9 +54,6 @@ public class StockFighterTest {
 
 	private final Logger slf4jLogger = LoggerFactory.getLogger(StockFighterTest.class);
 	private final static String API_KEY = "2e5b8ebee62687ec9d8b5c5f619a9fd54053a999";
-	private final static String SCHEMA = "https";
-	private final static String HOST = "api.stockfighter.io";
-	private final static String PATH = "/ob/api";
 
 	private Injector injector;
 
@@ -71,7 +74,24 @@ public class StockFighterTest {
 	}
 
 	@Test
-	public void testVenueUp() throws URISyntaxException {
+	public void testPlaceOrderForStock()
+			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
+
+		Order order = new Order();
+		order.setAccount("EXB123456");
+		order.setPrice(1);
+		order.setQty(1);
+		// order.setDirection(Direction.BUY.toString());
+		order.setOrderType(OrderTypes.MARKET);
+
+		// OrderResponse placeOrderForStock =
+		// injector.getInstance(StockfighterService.class).placeOrderForStock("TESTEX",
+		// "FOOBAR", order);
+
+	}
+
+	@Test
+	public void testVenueUp() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		assertEquals(true, injector.getInstance(StockfighterService.class).isVenueUp("TESTEX"));
 	}
@@ -80,7 +100,7 @@ public class StockFighterTest {
 	public void testOrderBookForStock() throws URISyntaxException, JsonParseException, JsonMappingException,
 			UnsupportedOperationException, IOException {
 
-		Orderbook orderBookForStock = injector.getInstance(StockfighterService.class).orderBookForStock("TESTEX",
+		Orderbook orderBookForStock = injector.getInstance(StockfighterService.class).getOrderBookForStock("TESTEX",
 				"FOOBAR");
 
 		assertNotNull(orderBookForStock);
@@ -180,75 +200,18 @@ public class StockFighterTest {
 	}
 
 	@Test
-	public void testHeartbeat() {
+	public void testHeartbeat() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
-		Heartbeat heartbeat = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
-		HttpGet httpGet = new HttpGet("https://api.stockfighter.io/ob/api/heartbeat");
-
-		try {
-			Date sentDate = new Date();
-			slf4jLogger.info("POST: Requesting hearbeat information. " + sentDate.toString());
-
-			Date receiveDate = new Date();
-			httpResponse = httpClient.execute(httpGet);
-			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
-					+ " milliseconds to fulfill request.");
-
-			if (httpResponse.getStatusLine().getStatusCode() != 200) {
-				throw new RuntimeException(
-						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
-			}
-
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		heartbeat = (Heartbeat) parseReponse(httpResponse, Heartbeat.class);
-
-		assertNotNull(heartbeat);
-		assertEquals(heartbeat.getClass(), Heartbeat.class);
-
+		boolean heartbeat = injector.getInstance(StockfighterService.class).getHearBeat();
+		assertEquals(true, heartbeat);
 	}
 
 	@Test
-	public void testQuote() {
+	public void testQuote() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
-		Quote quote = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
-		HttpGet httpGet = new HttpGet("https://api.stockfighter.io/ob/api/venues/TESTEX/stocks/FOOBAR/quote");
+		Quote quote = injector.getInstance(StockfighterService.class).getQuote("TESTEX", "FOOBAR");
 
-		try {
-			httpResponse = httpClient.execute(httpGet);
-
-			if (httpResponse.getStatusLine().getStatusCode() != 200) {
-				throw new RuntimeException(
-						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
-			}
-
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		quote = (Quote) parseReponse(httpResponse, Quote.class);
-
-		System.out.println(quote.getLastTrade());
-	}
-
-	private static String encodeURI(URI uri) {
-
-		return StringUtils.replaceEach(uri.toString(), new String[] { "#", "?", "=" }, new String[] { "/", "/", "/" });
-
+		assertEquals(Quote.class, quote.getClass());
 	}
 
 	private static EntityClass parseReponse(HttpResponse httpResponse, Class<? extends EntityClass> clazz) {

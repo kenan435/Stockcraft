@@ -6,7 +6,7 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class Orders extends EntityClass {
+public class Orders implements EntityClass {
 
 	private String symbol;
 	private String venue;

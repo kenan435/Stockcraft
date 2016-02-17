@@ -5,7 +5,7 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class OrdersReponse extends EntityClass {
+public class OrdersReponse implements EntityClass {
 
 	private boolean ok;
 	private String venue;

@@ -10,9 +10,9 @@ public class Fills {
 	private int price;
 
 	private int qty;
-	
+
 	private Date ts;
-	
+
 	public Fills() {
 		// TODO Auto-generated constructor stub
 	}
