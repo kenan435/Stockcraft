@@ -7,6 +7,7 @@ import java.net.URISyntaxException;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
 
+import stockfighter.pojo.Level;
 import stockfighter.pojo.Order;
 import stockfighter.pojo.OrderResponse;
 import stockfighter.pojo.Orderbook;
@@ -52,4 +53,6 @@ public interface IStockFighterService {
 	 */
 	public OrderResponse placeOrderForStock(Order order) throws UnsupportedEncodingException, URISyntaxException,
 			JsonGenerationException, JsonMappingException, IOException;
+
+	public Level startLevel() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException;
 }

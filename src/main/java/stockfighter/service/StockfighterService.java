@@ -25,6 +25,8 @@ import org.apache.http.util.EntityUtils;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +34,7 @@ import com.google.gson.Gson;
 
 import stockfighter.pojo.EntityClass;
 import stockfighter.pojo.Heartbeat;
+import stockfighter.pojo.Level;
 import stockfighter.pojo.Order;
 import stockfighter.pojo.OrderResponse;
 import stockfighter.pojo.Orderbook;
@@ -48,16 +51,20 @@ public class StockfighterService implements IStockFighterService {
 
 	final Logger slf4jLogger = LoggerFactory.getLogger(StockfighterService.class);
 
-	public void startLevel() throws URISyntaxException {
+	public Level startLevel() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		final String path = "/gm/levels/first_steps";
+		final String host = "www.stockfighter.io";
 
-		OrderResponse orderResponse = null;
+		// POST https://www.stockfighter.io/gm/levels/first_steps HTTP/1.1
+		// POST https://www.stockfighter.io/gm/levels/first_steps $HEADER
+
+		Level level = null;
 		HttpResponse httpResponse = null;
 		CloseableHttpClient httpClient = getHttpClient();
 
 		URIBuilder uriBuilder = new URIBuilder();
-		URI uri = uriBuilder.setScheme(SCHEMA).setHost(HOST).setPath(path).build();
+		URI uri = uriBuilder.setScheme(SCHEMA).setHost(host).setPath(path).build();
 
 		HttpPost post = new HttpPost(encodeURI(uri));
 		post.addHeader("X-Starfighter-Authorization", API_KEY);
@@ -84,8 +91,9 @@ public class StockfighterService implements IStockFighterService {
 			e.printStackTrace();
 		}
 
-		// orderResponse = (OrderResponse) parseReponse(httpResponse,
-		// OrderResponse.class);
+		System.out.println(EntityUtils.toString(httpResponse.getEntity()));
+
+		return level;
 	}
 
 	@Override

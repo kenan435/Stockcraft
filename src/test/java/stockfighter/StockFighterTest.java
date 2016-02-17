@@ -5,14 +5,12 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
@@ -38,11 +36,9 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 import stockfighter.pojo.Cancel;
-import stockfighter.pojo.Direction;
 import stockfighter.pojo.EntityClass;
-import stockfighter.pojo.Heartbeat;
+import stockfighter.pojo.Level;
 import stockfighter.pojo.Order;
-import stockfighter.pojo.OrderResponse;
 import stockfighter.pojo.OrderTypes;
 import stockfighter.pojo.Orderbook;
 import stockfighter.pojo.OrdersReponse;
@@ -71,6 +67,13 @@ public class StockFighterTest {
 	@After
 	public void tearDown() throws Exception {
 		injector = null;
+	}
+
+	@Test
+	public void testStartLevel() throws JsonGenerationException, JsonMappingException, URISyntaxException, IOException{
+	
+		
+		Level level = injector.getInstance(StockfighterService.class).startLevel();
 	}
 
 	@Test
