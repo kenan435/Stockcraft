@@ -38,6 +38,7 @@ import com.google.inject.Injector;
 import stockfighter.pojo.Cancel;
 import stockfighter.pojo.EntityClass;
 import stockfighter.pojo.Level;
+import stockfighter.pojo.LevelControl;
 import stockfighter.pojo.Order;
 import stockfighter.pojo.OrderTypes;
 import stockfighter.pojo.Orderbook;
@@ -70,10 +71,20 @@ public class StockFighterTest {
 	}
 
 	@Test
-	public void testStartLevel() throws JsonGenerationException, JsonMappingException, URISyntaxException, IOException{
-	
+	public void testStartLevel() throws JsonGenerationException, JsonMappingException, URISyntaxException, IOException {
+
+		String levelName = "first_steps";
+
+		// start level
+		Level level = injector.getInstance(StockfighterService.class).startLevel(levelName, LevelControl.START, null);
+		assertNotNull(level.getInstanceId());
 		
-		Level level = injector.getInstance(StockfighterService.class).startLevel();
+		level = injector.getInstance(StockfighterService.class).startLevel(levelName, LevelControl.RESTART, level.getInstanceId());
+		
+		level = injector.getInstance(StockfighterService.class).startLevel(levelName, LevelControl.STOP, level.getInstanceId());
+		
+		level = injector.getInstance(StockfighterService.class).startLevel(levelName, LevelControl.RESUME, level.getInstanceId());
+		
 	}
 
 	@Test
@@ -94,6 +105,7 @@ public class StockFighterTest {
 	}
 
 	@Test
+	@Ignore
 	public void testVenueUp() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		assertEquals(true, injector.getInstance(StockfighterService.class).isVenueUp("TESTEX"));

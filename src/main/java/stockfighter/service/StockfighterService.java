@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.commons.io.output.ThresholdingOutputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -25,8 +24,6 @@ import org.apache.http.util.EntityUtils;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +32,7 @@ import com.google.gson.Gson;
 import stockfighter.pojo.EntityClass;
 import stockfighter.pojo.Heartbeat;
 import stockfighter.pojo.Level;
+import stockfighter.pojo.LevelControl;
 import stockfighter.pojo.Order;
 import stockfighter.pojo.OrderResponse;
 import stockfighter.pojo.Orderbook;
@@ -51,9 +49,15 @@ public class StockfighterService implements IStockFighterService {
 
 	final Logger slf4jLogger = LoggerFactory.getLogger(StockfighterService.class);
 
-	public Level startLevel() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
+	public Level startLevel(String levelName, LevelControl levelControl, String instanceID)
+			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
-		final String path = "/gm/levels/first_steps";
+		if ((levelControl.equals(LevelControl.RESTART) || levelControl.equals(LevelControl.STOP)
+				|| levelControl.equals(LevelControl.RESUME)) && instanceID == null) {
+			throw new RuntimeException("Cannot stop, restart or resume a level withouth instanceID");
+		}
+
+		String path = null;
 		final String host = "www.stockfighter.io";
 
 		// POST https://www.stockfighter.io/gm/levels/first_steps HTTP/1.1
@@ -63,6 +67,19 @@ public class StockfighterService implements IStockFighterService {
 		HttpResponse httpResponse = null;
 		CloseableHttpClient httpClient = getHttpClient();
 
+		switch (levelControl) {
+		case START:
+			path = "/gm/levels/" + levelName;
+			break;
+		case STOP:
+		case RESTART:
+		case RESUME:
+			path = "/gm/instances/" + instanceID + levelName.toString();
+			break;
+		default:
+			break;
+		}
+
 		URIBuilder uriBuilder = new URIBuilder();
 		URI uri = uriBuilder.setScheme(SCHEMA).setHost(host).setPath(path).build();
 
@@ -71,12 +88,14 @@ public class StockfighterService implements IStockFighterService {
 
 		try {
 			Date sentDate = new Date();
-			slf4jLogger.info("POST: Place order for stock. " + sentDate.toString());
+			slf4jLogger.info("POST: Starting new level. " + sentDate.toString());
 
 			Date receiveDate = new Date();
 			httpResponse = httpClient.execute(post);
 			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
 					+ " milliseconds to fulfill request.");
+
+			// slf4jLogger.info(EntityUtils.toString(httpResponse.getEntity()));
 
 			if (httpResponse.getStatusLine().getStatusCode() != 200) {
 				throw new RuntimeException(
@@ -91,9 +110,15 @@ public class StockfighterService implements IStockFighterService {
 			e.printStackTrace();
 		}
 
-		System.out.println(EntityUtils.toString(httpResponse.getEntity()));
+		level = (Level) parseReponse(httpResponse, Level.class);
 
 		return level;
+	}
+
+	public void restartLevel() {
+
+		// GET https://www.stockfighter.io/gm/instances/314159
+
 	}
 
 	@Override
