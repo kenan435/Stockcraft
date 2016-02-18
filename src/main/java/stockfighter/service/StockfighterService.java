@@ -33,6 +33,7 @@ import stockfighter.pojo.EntityClass;
 import stockfighter.pojo.Heartbeat;
 import stockfighter.pojo.Level;
 import stockfighter.pojo.LevelControl;
+import stockfighter.pojo.LevelNames;
 import stockfighter.pojo.Order;
 import stockfighter.pojo.OrderResponse;
 import stockfighter.pojo.Orderbook;
@@ -49,7 +50,8 @@ public class StockfighterService implements IStockFighterService {
 
 	final Logger slf4jLogger = LoggerFactory.getLogger(StockfighterService.class);
 
-	public Level startLevel(String levelName, LevelControl levelControl, String instanceID)
+	@Override
+	public Level levelControls(LevelNames levelNames, LevelControl levelControl, String instanceID)
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		if ((levelControl.equals(LevelControl.RESTART) || levelControl.equals(LevelControl.STOP)
@@ -57,7 +59,7 @@ public class StockfighterService implements IStockFighterService {
 			throw new RuntimeException("Cannot stop, restart or resume a level withouth instanceID");
 		}
 
-		String path = null;
+		String path = "/gm";
 		final String host = "www.stockfighter.io";
 
 		// POST https://www.stockfighter.io/gm/levels/first_steps HTTP/1.1
@@ -67,18 +69,7 @@ public class StockfighterService implements IStockFighterService {
 		HttpResponse httpResponse = null;
 		CloseableHttpClient httpClient = getHttpClient();
 
-		switch (levelControl) {
-		case START:
-			path = "/gm/levels/" + levelName;
-			break;
-		case STOP:
-		case RESTART:
-		case RESUME:
-			path = "/gm/instances/" + instanceID + levelName.toString();
-			break;
-		default:
-			break;
-		}
+		path = buildPathProperty(levelNames, levelControl, instanceID, path);
 
 		URIBuilder uriBuilder = new URIBuilder();
 		URI uri = uriBuilder.setScheme(SCHEMA).setHost(host).setPath(path).build();
@@ -115,10 +106,21 @@ public class StockfighterService implements IStockFighterService {
 		return level;
 	}
 
-	public void restartLevel() {
-
-		// GET https://www.stockfighter.io/gm/instances/314159
-
+	private static String buildPathProperty(LevelNames levelNames, LevelControl levelControl, String instanceID,
+			String path) {
+		switch (levelControl) {
+		case START:
+			path = path + LEVELS + levelNames.name().toLowerCase();
+			break;
+		case STOP:
+		case RESTART:
+		case RESUME:
+			path = path + INSTANCES + instanceID + "/" + levelControl.name().toLowerCase();
+			break;
+		default:
+			break;
+		}
+		return path;
 	}
 
 	@Override

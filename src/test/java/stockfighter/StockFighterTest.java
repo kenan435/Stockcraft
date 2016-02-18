@@ -2,6 +2,8 @@ package stockfighter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -39,6 +41,7 @@ import stockfighter.pojo.Cancel;
 import stockfighter.pojo.EntityClass;
 import stockfighter.pojo.Level;
 import stockfighter.pojo.LevelControl;
+import stockfighter.pojo.LevelNames;
 import stockfighter.pojo.Order;
 import stockfighter.pojo.OrderTypes;
 import stockfighter.pojo.Orderbook;
@@ -71,20 +74,19 @@ public class StockFighterTest {
 	}
 
 	@Test
-	public void testStartLevel() throws JsonGenerationException, JsonMappingException, URISyntaxException, IOException {
+	public void testLevelControls() throws JsonGenerationException, JsonMappingException, URISyntaxException, IOException {
 
-		String levelName = "first_steps";
-
-		// start level
-		Level level = injector.getInstance(StockfighterService.class).startLevel(levelName, LevelControl.START, null);
+		Level level = injector.getInstance(StockfighterService.class).levelControls(LevelNames.FIRST_STEPS, LevelControl.START, null);
+		assertTrue(level.isOk());
 		assertNotNull(level.getInstanceId());
 		
-		level = injector.getInstance(StockfighterService.class).startLevel(levelName, LevelControl.RESTART, level.getInstanceId());
+		level = injector.getInstance(StockfighterService.class).levelControls(LevelNames.FIRST_STEPS, LevelControl.RESTART, level.getInstanceId());	
+		assertTrue(level.isOk());
+		assertNotNull(level.getInstanceId());
 		
-		level = injector.getInstance(StockfighterService.class).startLevel(levelName, LevelControl.STOP, level.getInstanceId());
-		
-		level = injector.getInstance(StockfighterService.class).startLevel(levelName, LevelControl.RESUME, level.getInstanceId());
-		
+		level = injector.getInstance(StockfighterService.class).levelControls(LevelNames.FIRST_STEPS, LevelControl.STOP, level.getInstanceId());
+		assertTrue(level.isOk());
+		assertNull(level.getInstanceId());
 	}
 
 	@Test

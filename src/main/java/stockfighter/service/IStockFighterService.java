@@ -9,6 +9,7 @@ import org.codehaus.jackson.map.JsonMappingException;
 
 import stockfighter.pojo.Level;
 import stockfighter.pojo.LevelControl;
+import stockfighter.pojo.LevelNames;
 import stockfighter.pojo.Order;
 import stockfighter.pojo.OrderResponse;
 import stockfighter.pojo.Orderbook;
@@ -22,6 +23,8 @@ public interface IStockFighterService {
 
 	// Interfacing with the gamemaster properties
 	final static String URL = "https://www.stockfighter.io/gm";
+	final static String LEVELS = "/levels/";
+	final static String INSTANCES = "/instances/";
 
 	/**
 	 * @param venue
@@ -49,6 +52,6 @@ public interface IStockFighterService {
 	public OrderResponse placeOrderForStock(Order order) throws UnsupportedEncodingException, URISyntaxException,
 			JsonGenerationException, JsonMappingException, IOException;
 
-	public Level startLevel(String levelName, LevelControl levelControl, String instaceID)
+	Level levelControls(LevelNames firstSteps, LevelControl levelControl, String instanceID)
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException;
 }
