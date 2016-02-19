@@ -1,4 +1,4 @@
-package stockfighter.pojo;
+package stockfighter.rest.reponse;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -7,7 +7,7 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class Orderbook implements EntityClass {
+public class OrderbookResponse implements IEntityClass {
 
 	private boolean ok;
 	private String venue;

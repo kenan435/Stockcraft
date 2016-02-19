@@ -9,14 +9,15 @@ import org.codehaus.jackson.map.JsonMappingException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
-import stockfighter.pojo.Direction;
-import stockfighter.pojo.Level;
-import stockfighter.pojo.LevelControl;
-import stockfighter.pojo.LevelNames;
+import stockfighter.enums.Direction;
+import stockfighter.enums.LevelControl;
+import stockfighter.enums.LevelNames;
+import stockfighter.enums.OrderTypes;
 import stockfighter.pojo.Order;
-import stockfighter.pojo.OrderTypes;
-import stockfighter.pojo.Orderbook;
-import stockfighter.pojo.Quote;
+import stockfighter.rest.reponse.LevelResponse;
+import stockfighter.rest.reponse.OrderResponse;
+import stockfighter.rest.reponse.OrderbookResponse;
+import stockfighter.rest.reponse.Price;
 import stockfighter.service.StockfighterService;
 
 public class StockFighter {
@@ -30,46 +31,29 @@ public class StockFighter {
 		/* ----------------------- */
 
 		// 1) Start the level
-		Level level = stockfighterService.levelControls(LevelNames.SELL_SIDE, LevelControl.START, null);
+		LevelResponse level = stockfighterService.levelControls(LevelNames.SELL_SIDE, LevelControl.START, null);
 
 		String venue = (level.getVenues())[0];
 		String ticker = (level.getTickers())[0];
 
-		Orderbook orderBookForStock = stockfighterService.getOrderBookForStock(venue, ticker);
+		OrderbookResponse orderBookForStock = stockfighterService.getOrderBookForStock(venue, ticker);
 
 		// BUY LOW, SELL HIGH algo
 
 		Order order = new Order();
-		order.setAccount(level.getAccount());
-		order.setPrice(7000);
+
+		// set the price
+		Double priceAverage = orderBookForStock.getBids().stream().mapToInt(Price::getPrice).average().getAsDouble();
+		order.setPrice(priceAverage.intValue());
+
 		order.setQty(100);
-		order.setVenue(order.getVenue());
 		order.setDirection(Direction.BUY);
-		order.setStock(ticker);
 		order.setOrderType(OrderTypes.LIMIT);
-		stockfighterService.placeOrderForStock(order);
+
+		OrderResponse placeOrderForStock = stockfighterService.placeOrderForStock(venue, ticker, order);
 
 		// *) Stop the level
 		stockfighterService.levelControls(LevelNames.SELL_SIDE, LevelControl.STOP, level.getInstanceId());
-
-		// String account= "";
-		// int price = 0;
-		// int qty = 0;
-		// String venue = "";
-		// String stock = "";
-		// Direction direction = null;
-		// OrderTypes orderTypes = null;
-		//
-		// Order order = new Order();
-		// order.setAccount(account);
-		// order.setPrice(price);
-		// order.setQty(qty);
-		// order.setVenue(venue);
-		// order.setDirection(direction);
-		// order.setStock(stock);
-		// order.setOrderType(orderTypes);
-		//
-		// stockfighterService.placeOrderForStock(order);
 
 	}
 

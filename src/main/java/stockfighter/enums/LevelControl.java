@@ -1,4 +1,4 @@
-package stockfighter.pojo;
+package stockfighter.enums;
 
 public enum LevelControl {
 

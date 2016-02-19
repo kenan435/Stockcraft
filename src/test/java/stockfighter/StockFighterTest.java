@@ -37,17 +37,19 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
-import stockfighter.pojo.Cancel;
-import stockfighter.pojo.EntityClass;
-import stockfighter.pojo.Level;
-import stockfighter.pojo.LevelControl;
-import stockfighter.pojo.LevelNames;
+import stockfighter.api.IStockFighterService;
+import stockfighter.enums.Direction;
+import stockfighter.enums.LevelControl;
+import stockfighter.enums.LevelNames;
+import stockfighter.enums.OrderTypes;
 import stockfighter.pojo.Order;
-import stockfighter.pojo.OrderTypes;
-import stockfighter.pojo.Orderbook;
-import stockfighter.pojo.OrdersReponse;
-import stockfighter.pojo.Quote;
-import stockfighter.service.IStockFighterService;
+import stockfighter.rest.reponse.CancelResponse;
+import stockfighter.rest.reponse.IEntityClass;
+import stockfighter.rest.reponse.LevelResponse;
+import stockfighter.rest.reponse.OrderResponse;
+import stockfighter.rest.reponse.OrderbookResponse;
+import stockfighter.rest.reponse.OrdersReponse;
+import stockfighter.rest.reponse.QuoteResponse;
 import stockfighter.service.StockfighterService;
 
 public class StockFighterTest {
@@ -74,17 +76,21 @@ public class StockFighterTest {
 	}
 
 	@Test
-	public void testLevelControls() throws JsonGenerationException, JsonMappingException, URISyntaxException, IOException {
+	public void testLevelControls()
+			throws JsonGenerationException, JsonMappingException, URISyntaxException, IOException {
 
-		Level level = injector.getInstance(StockfighterService.class).levelControls(LevelNames.FIRST_STEPS, LevelControl.START, null);
+		LevelResponse level = injector.getInstance(StockfighterService.class).levelControls(LevelNames.FIRST_STEPS,
+				LevelControl.START, null);
 		assertTrue(level.isOk());
 		assertNotNull(level.getInstanceId());
-		
-		level = injector.getInstance(StockfighterService.class).levelControls(LevelNames.FIRST_STEPS, LevelControl.RESTART, level.getInstanceId());	
+
+		level = injector.getInstance(StockfighterService.class).levelControls(LevelNames.FIRST_STEPS,
+				LevelControl.RESTART, level.getInstanceId());
 		assertTrue(level.isOk());
 		assertNotNull(level.getInstanceId());
-		
-		level = injector.getInstance(StockfighterService.class).levelControls(LevelNames.FIRST_STEPS, LevelControl.STOP, level.getInstanceId());
+
+		level = injector.getInstance(StockfighterService.class).levelControls(LevelNames.FIRST_STEPS, LevelControl.STOP,
+				level.getInstanceId());
 		assertTrue(level.isOk());
 		assertNull(level.getInstanceId());
 	}
@@ -97,31 +103,35 @@ public class StockFighterTest {
 		order.setAccount("EXB123456");
 		order.setPrice(1);
 		order.setQty(1);
-		// order.setDirection(Direction.BUY.toString());
+		order.setDirection(Direction.BUY);
 		order.setOrderType(OrderTypes.MARKET);
 
-		// OrderResponse placeOrderForStock =
-		// injector.getInstance(StockfighterService.class).placeOrderForStock("TESTEX",
-		// "FOOBAR", order);
+		OrderResponse placeOrderForStock = injector.getInstance(StockfighterService.class).placeOrderForStock("TESTEX",
+				"FOOBAR", order);
+
+		assertTrue(placeOrderForStock.isOk());
+		assertEquals(placeOrderForStock.getAccount(), "EXB123456");
+		assertEquals(placeOrderForStock.getDirection(), Direction.BUY.name().toLowerCase());
+		assertEquals(placeOrderForStock.getVenue(), "TESTEX");
+		assertEquals(placeOrderForStock.getSymbol(), "FOOBAR");
 
 	}
 
 	@Test
-	@Ignore
 	public void testVenueUp() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
-		assertEquals(true, injector.getInstance(StockfighterService.class).isVenueUp("TESTEX"));
+		assertTrue(injector.getInstance(StockfighterService.class).isVenueUp("TESTEX"));
 	}
 
 	@Test
 	public void testOrderBookForStock() throws URISyntaxException, JsonParseException, JsonMappingException,
 			UnsupportedOperationException, IOException {
 
-		Orderbook orderBookForStock = injector.getInstance(StockfighterService.class).getOrderBookForStock("TESTEX",
+		OrderbookResponse orderBookForStock = injector.getInstance(StockfighterService.class).getOrderBookForStock("TESTEX",
 				"FOOBAR");
 
 		assertNotNull(orderBookForStock);
-		assertEquals(Orderbook.class, orderBookForStock.getClass());
+		assertEquals(OrderbookResponse.class, orderBookForStock.getClass());
 	}
 
 	@Test
@@ -180,7 +190,7 @@ public class StockFighterTest {
 	@Ignore
 	public void testCancel() {
 
-		Cancel cancel = null;
+		CancelResponse cancel = null;
 		HttpResponse httpResponse = null;
 		CloseableHttpClient httpClient = getHttpClient();
 		HttpDelete httpDelete = new HttpDelete("https://api.stockfighter.io/ob/api/venues/ROBUST/stocks/ROBO/orders/1");
@@ -209,10 +219,10 @@ public class StockFighterTest {
 			e.printStackTrace();
 		}
 
-		cancel = (Cancel) parseReponse(httpResponse, Cancel.class);
+		cancel = (CancelResponse) parseReponse(httpResponse, CancelResponse.class);
 
 		assertNotNull(cancel);
-		assertEquals(cancel.getClass(), Cancel.class);
+		assertEquals(cancel.getClass(), CancelResponse.class);
 
 	}
 
@@ -226,14 +236,14 @@ public class StockFighterTest {
 	@Test
 	public void testQuote() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
-		Quote quote = injector.getInstance(StockfighterService.class).getQuote("TESTEX", "FOOBAR");
+		QuoteResponse quote = injector.getInstance(StockfighterService.class).getQuote("TESTEX", "FOOBAR");
 
-		assertEquals(Quote.class, quote.getClass());
+		assertEquals(QuoteResponse.class, quote.getClass());
 	}
 
-	private static EntityClass parseReponse(HttpResponse httpResponse, Class<? extends EntityClass> clazz) {
+	private IEntityClass parseReponse(HttpResponse httpResponse, Class<? extends IEntityClass> clazz) {
 
-		EntityClass entityClass = null;
+		IEntityClass entityClass = null;
 		ObjectMapper objectMapper = new ObjectMapper();
 
 		try {

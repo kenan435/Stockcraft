@@ -1,5 +1,8 @@
 package stockfighter.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
@@ -9,10 +12,10 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
@@ -20,7 +23,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.util.EntityUtils;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -29,16 +31,18 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 
-import stockfighter.pojo.EntityClass;
-import stockfighter.pojo.Heartbeat;
-import stockfighter.pojo.Level;
-import stockfighter.pojo.LevelControl;
-import stockfighter.pojo.LevelNames;
+import stockfighter.api.IStockFighterService;
+import stockfighter.enums.LevelControl;
+import stockfighter.enums.LevelNames;
 import stockfighter.pojo.Order;
-import stockfighter.pojo.OrderResponse;
-import stockfighter.pojo.Orderbook;
-import stockfighter.pojo.Quote;
-import stockfighter.pojo.VenueResponse;
+import stockfighter.rest.reponse.CancelResponse;
+import stockfighter.rest.reponse.IEntityClass;
+import stockfighter.rest.reponse.HeartbeatResponse;
+import stockfighter.rest.reponse.LevelResponse;
+import stockfighter.rest.reponse.OrderResponse;
+import stockfighter.rest.reponse.OrderbookResponse;
+import stockfighter.rest.reponse.QuoteResponse;
+import stockfighter.rest.reponse.VenueResponse;
 
 /**
  * Service class implementing the IStockFighterService
@@ -51,7 +55,7 @@ public class StockfighterService implements IStockFighterService {
 	final Logger slf4jLogger = LoggerFactory.getLogger(StockfighterService.class);
 
 	@Override
-	public Level levelControls(LevelNames levelNames, LevelControl levelControl, String instanceID)
+	public LevelResponse levelControls(LevelNames levelNames, LevelControl levelControl, String instanceID)
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		if ((levelControl.equals(LevelControl.RESTART) || levelControl.equals(LevelControl.STOP)
@@ -65,7 +69,7 @@ public class StockfighterService implements IStockFighterService {
 		// POST https://www.stockfighter.io/gm/levels/first_steps HTTP/1.1
 		// POST https://www.stockfighter.io/gm/levels/first_steps $HEADER
 
-		Level level = null;
+		LevelResponse level = null;
 		HttpResponse httpResponse = null;
 		CloseableHttpClient httpClient = getHttpClient();
 
@@ -94,14 +98,12 @@ public class StockfighterService implements IStockFighterService {
 			}
 
 		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-		level = (Level) parseReponse(httpResponse, Level.class);
+		level = (LevelResponse) parseReponse(httpResponse, LevelResponse.class);
 
 		return level;
 	}
@@ -124,7 +126,7 @@ public class StockfighterService implements IStockFighterService {
 	}
 
 	@Override
-	public OrderResponse placeOrderForStock(Order order)
+	public OrderResponse placeOrderForStock(String venue, String ticker, Order order)
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		OrderResponse orderResponse = null;
@@ -132,13 +134,8 @@ public class StockfighterService implements IStockFighterService {
 		CloseableHttpClient httpClient = getHttpClient();
 
 		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
-		nameValuePairs.add(new BasicNameValuePair("account", order.getAccount()));
-		nameValuePairs.add(new BasicNameValuePair("venues", order.getVenue()));
-		nameValuePairs.add(new BasicNameValuePair("stocks", order.getStock()));
-		nameValuePairs.add(new BasicNameValuePair("price", Integer.toString(order.getPrice())));
-		nameValuePairs.add(new BasicNameValuePair("qty", Integer.toString(order.getQty())));
-		nameValuePairs.add(new BasicNameValuePair("direction", order.getDirection().toString()));
-		nameValuePairs.add(new BasicNameValuePair("orderType", order.getOrderType().toString()));
+		nameValuePairs.add(new BasicNameValuePair("venues", venue));
+		nameValuePairs.add(new BasicNameValuePair("stocks", ticker));
 
 		Gson gson = new Gson();
 		StringEntity entity = new StringEntity(gson.toJson(order));
@@ -168,11 +165,9 @@ public class StockfighterService implements IStockFighterService {
 			}
 
 		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			slf4jLogger.error(e.getMessage());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			slf4jLogger.error(e.getMessage());
 		}
 
 		orderResponse = (OrderResponse) parseReponse(httpResponse, OrderResponse.class);
@@ -180,21 +175,11 @@ public class StockfighterService implements IStockFighterService {
 		return orderResponse;
 	}
 
-	/**
-	 * Get a quick look at the most recent trade information for a stock.
-	 * 
-	 * @param venue
-	 * @param stock
-	 * @return a quote object
-	 * @throws URISyntaxException
-	 * @throws JsonGenerationException
-	 * @throws JsonMappingException
-	 * @throws IOException
-	 */
-	public Quote getQuote(String venue, String stock)
+	@Override
+	public QuoteResponse getQuote(String venue, String stock)
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
-		Quote quote = null;
+		QuoteResponse quote = null;
 		HttpResponse httpResponse = null;
 		CloseableHttpClient httpClient = getHttpClient();
 
@@ -223,21 +208,19 @@ public class StockfighterService implements IStockFighterService {
 			}
 
 		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-		quote = (Quote) parseReponse(httpResponse, Quote.class);
+		quote = (QuoteResponse) parseReponse(httpResponse, QuoteResponse.class);
 
 		return quote;
 	}
 
 	public boolean getHearBeat() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
-		Heartbeat heartbeat = null;
+		HeartbeatResponse heartbeat = null;
 		HttpResponse httpResponse = null;
 		CloseableHttpClient httpClient = getHttpClient();
 		final URIBuilder builder = new URIBuilder();
@@ -267,17 +250,17 @@ public class StockfighterService implements IStockFighterService {
 			e.printStackTrace();
 		}
 
-		heartbeat = (Heartbeat) parseReponse(httpResponse, Heartbeat.class);
+		heartbeat = (HeartbeatResponse) parseReponse(httpResponse, HeartbeatResponse.class);
 
 		return heartbeat.getOk();
 	}
 
+	@Override
 	public boolean isVenueUp(String venue)
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		VenueResponse venueResponse = null;
 		HttpResponse httpResponse = null;
-		HttpEntity httpEntity = null;
 		CloseableHttpClient httpClient = getHttpClient();
 
 		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
@@ -289,15 +272,15 @@ public class StockfighterService implements IStockFighterService {
 
 		HttpGet httpGet = new HttpGet(encodeURI(uri));
 
+		// https://api.stockfighter.io/ob/api/venues/:venue/heartbeat
+		// https://api.stockfighter.io/ob/api/venues/TESTEX/heartbeat HTTP/1.1
+
 		try {
 			Date sentDate = new Date();
 			slf4jLogger.info("POST: Requesting status of a venue at: " + sentDate.toString());
 
 			Date receiveDate = new Date();
 			httpResponse = httpClient.execute(httpGet);
-			HttpEntity httpEntity2 = httpResponse.getEntity();
-			EntityUtils.toString(httpEntity2);
-			httpResponse.setEntity(httpEntity2);
 			slf4jLogger
 					.info("RESPONSE: Received in " + (receiveDate.getTime() - sentDate.getTime()) + " milliseconds.");
 
@@ -320,10 +303,10 @@ public class StockfighterService implements IStockFighterService {
 	}
 
 	@Override
-	public Orderbook getOrderBookForStock(String venue, String stock)
+	public OrderbookResponse getOrderBookForStock(String venue, String stock)
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
-		Orderbook orderbook = null;
+		OrderbookResponse orderbook = null;
 		HttpResponse httpResponse = null;
 		CloseableHttpClient httpClient = getHttpClient();
 
@@ -359,9 +342,48 @@ public class StockfighterService implements IStockFighterService {
 			e.printStackTrace();
 		}
 
-		orderbook = (Orderbook) parseReponse(httpResponse, Orderbook.class);
+		orderbook = (OrderbookResponse) parseReponse(httpResponse, OrderbookResponse.class);
 
 		return orderbook;
+	}
+
+	@Override
+	public void testCancel() throws JsonGenerationException, JsonMappingException, IOException {
+
+		CancelResponse cancel = null;
+		HttpResponse httpResponse = null;
+		CloseableHttpClient httpClient = getHttpClient();
+		HttpDelete httpDelete = new HttpDelete("https://api.stockfighter.io/ob/api/venues/ROBUST/stocks/ROBO/orders/1");
+
+		try {
+			Date sentDate = new Date();
+			slf4jLogger.info("DELETE: Requesting Delete information. " + sentDate.toString());
+
+			Date receiveDate = new Date();
+			httpResponse = httpClient.execute(httpDelete);
+
+			if (httpResponse.getStatusLine().getStatusCode() != 200) {
+				slf4jLogger.error("Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+				throw new RuntimeException(
+						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+			} else {
+				slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+						+ " milliseconds to cancel an order.");
+			}
+
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		cancel = (CancelResponse) parseReponse(httpResponse, CancelResponse.class);
+
+		assertNotNull(cancel);
+		assertEquals(cancel.getClass(), CancelResponse.class);
+
 	}
 
 	private static String encodeURI(URI uri) {
@@ -371,10 +393,10 @@ public class StockfighterService implements IStockFighterService {
 
 	}
 
-	private static EntityClass parseReponse(HttpResponse httpResponse, Class<? extends EntityClass> clazz)
+	private static IEntityClass parseReponse(HttpResponse httpResponse, Class<? extends IEntityClass> clazz)
 			throws JsonGenerationException, JsonMappingException, IOException {
 
-		EntityClass entityClass = null;
+		IEntityClass entityClass = null;
 		ObjectMapper objectMapper = new ObjectMapper();
 
 		try {

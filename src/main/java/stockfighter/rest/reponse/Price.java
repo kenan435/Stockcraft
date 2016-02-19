@@ -1,4 +1,4 @@
-package stockfighter.pojo;
+package stockfighter.rest.reponse;
 
 import lombok.Data;
 

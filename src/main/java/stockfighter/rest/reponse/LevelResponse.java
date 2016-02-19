@@ -1,4 +1,4 @@
-package stockfighter.pojo;
+package stockfighter.rest.reponse;
 
 import java.util.Map;
 
@@ -8,7 +8,7 @@ import lombok.Data;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Level implements EntityClass {
+public class LevelResponse implements IEntityClass {
 
 	String account;
 	String instanceId;

@@ -1,4 +1,4 @@
-package stockfighter.pojo;
+package stockfighter.rest.reponse;
 
 import java.util.Date;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class Orders implements EntityClass {
+public class OrdersResponse implements IEntityClass {
 
 	private String symbol;
 	private String venue;

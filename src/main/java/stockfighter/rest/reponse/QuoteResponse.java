@@ -1,11 +1,11 @@
-package stockfighter.pojo;
+package stockfighter.rest.reponse;
 
 import java.util.Date;
 
 import lombok.Data;
 
 @Data
-public class Quote implements EntityClass {
+public class QuoteResponse implements IEntityClass {
 
 	private boolean ok;
 	private String symbol;
