@@ -9,6 +9,7 @@ import org.codehaus.jackson.map.JsonMappingException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
+import stockfighter.api.impl.StockfighterService;
 import stockfighter.enums.Direction;
 import stockfighter.enums.LevelControl;
 import stockfighter.enums.LevelNames;
@@ -18,7 +19,6 @@ import stockfighter.rest.reponse.LevelResponse;
 import stockfighter.rest.reponse.OrderResponse;
 import stockfighter.rest.reponse.OrderbookResponse;
 import stockfighter.rest.reponse.Price;
-import stockfighter.service.StockfighterService;
 
 public class StockFighter {
 

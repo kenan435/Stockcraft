@@ -3,7 +3,7 @@ package stockfighter;
 import com.google.inject.AbstractModule;
 
 import stockfighter.api.IStockFighterService;
-import stockfighter.service.StockfighterService;
+import stockfighter.api.impl.StockfighterService;
 
 public class SimpleModule extends AbstractModule {
 

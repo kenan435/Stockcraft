@@ -38,10 +38,12 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 import stockfighter.api.IStockFighterService;
+import stockfighter.api.impl.StockfighterService;
 import stockfighter.enums.Direction;
 import stockfighter.enums.LevelControl;
 import stockfighter.enums.LevelNames;
 import stockfighter.enums.OrderTypes;
+import stockfighter.exceptions.FailedStatusCode;
 import stockfighter.pojo.Order;
 import stockfighter.rest.reponse.CancelResponse;
 import stockfighter.rest.reponse.IEntityClass;
@@ -50,7 +52,6 @@ import stockfighter.rest.reponse.OrderResponse;
 import stockfighter.rest.reponse.OrderbookResponse;
 import stockfighter.rest.reponse.OrdersReponse;
 import stockfighter.rest.reponse.QuoteResponse;
-import stockfighter.service.StockfighterService;
 
 public class StockFighterTest {
 
@@ -73,6 +74,13 @@ public class StockFighterTest {
 	@After
 	public void tearDown() throws Exception {
 		injector = null;
+	}
+
+	@Test(expected = FailedStatusCode.class)
+	public void testFailedStatusCodeException()
+			throws JsonGenerationException, JsonMappingException, URISyntaxException, IOException {
+
+		injector.getInstance(StockfighterService.class).isVenueUp("MADE_UP_NAME");
 	}
 
 	@Test
@@ -127,8 +135,8 @@ public class StockFighterTest {
 	public void testOrderBookForStock() throws URISyntaxException, JsonParseException, JsonMappingException,
 			UnsupportedOperationException, IOException {
 
-		OrderbookResponse orderBookForStock = injector.getInstance(StockfighterService.class).getOrderBookForStock("TESTEX",
-				"FOOBAR");
+		OrderbookResponse orderBookForStock = injector.getInstance(StockfighterService.class)
+				.getOrderBookForStock("TESTEX", "FOOBAR");
 
 		assertNotNull(orderBookForStock);
 		assertEquals(OrderbookResponse.class, orderBookForStock.getClass());

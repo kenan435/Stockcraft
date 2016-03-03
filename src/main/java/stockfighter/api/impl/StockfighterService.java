@@ -1,4 +1,4 @@
-package stockfighter.service;
+package stockfighter.api.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -34,10 +34,11 @@ import com.google.gson.Gson;
 import stockfighter.api.IStockFighterService;
 import stockfighter.enums.LevelControl;
 import stockfighter.enums.LevelNames;
+import stockfighter.exceptions.FailedStatusCode;
 import stockfighter.pojo.Order;
 import stockfighter.rest.reponse.CancelResponse;
-import stockfighter.rest.reponse.IEntityClass;
 import stockfighter.rest.reponse.HeartbeatResponse;
+import stockfighter.rest.reponse.IEntityClass;
 import stockfighter.rest.reponse.LevelResponse;
 import stockfighter.rest.reponse.OrderResponse;
 import stockfighter.rest.reponse.OrderbookResponse;
@@ -51,6 +52,10 @@ import stockfighter.rest.reponse.VenueResponse;
  *
  */
 public class StockfighterService implements IStockFighterService {
+
+	HttpResponse httpResponse;
+	final CloseableHttpClient httpClient = getHttpClient();
+	final URIBuilder uriBuilder = new URIBuilder();
 
 	final Logger slf4jLogger = LoggerFactory.getLogger(StockfighterService.class);
 
@@ -66,63 +71,20 @@ public class StockfighterService implements IStockFighterService {
 		String path = "/gm";
 		final String host = "www.stockfighter.io";
 
-		// POST https://www.stockfighter.io/gm/levels/first_steps HTTP/1.1
-		// POST https://www.stockfighter.io/gm/levels/first_steps $HEADER
-
 		LevelResponse level = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
 
 		path = buildPathProperty(levelNames, levelControl, instanceID, path);
 
-		URIBuilder uriBuilder = new URIBuilder();
 		URI uri = uriBuilder.setScheme(SCHEMA).setHost(host).setPath(path).build();
 
 		HttpPost post = new HttpPost(encodeURI(uri));
 		post.addHeader("X-Starfighter-Authorization", API_KEY);
 
-		try {
-			Date sentDate = new Date();
-			slf4jLogger.info("POST: Starting new level. " + sentDate.toString());
-
-			Date receiveDate = new Date();
-			httpResponse = httpClient.execute(post);
-			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
-					+ " milliseconds to fulfill request.");
-
-			// slf4jLogger.info(EntityUtils.toString(httpResponse.getEntity()));
-
-			if (httpResponse.getStatusLine().getStatusCode() != 200) {
-				throw new RuntimeException(
-						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
-			}
-
-		} catch (ClientProtocolException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		httpResponse = executePost(post);
 
 		level = (LevelResponse) parseReponse(httpResponse, LevelResponse.class);
 
 		return level;
-	}
-
-	private static String buildPathProperty(LevelNames levelNames, LevelControl levelControl, String instanceID,
-			String path) {
-		switch (levelControl) {
-		case START:
-			path = path + LEVELS + levelNames.name().toLowerCase();
-			break;
-		case STOP:
-		case RESTART:
-		case RESUME:
-			path = path + INSTANCES + instanceID + "/" + levelControl.name().toLowerCase();
-			break;
-		default:
-			break;
-		}
-		return path;
 	}
 
 	@Override
@@ -130,8 +92,6 @@ public class StockfighterService implements IStockFighterService {
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		OrderResponse orderResponse = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
 
 		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
 		nameValuePairs.add(new BasicNameValuePair("venues", venue));
@@ -142,7 +102,6 @@ public class StockfighterService implements IStockFighterService {
 
 		// https://api.stockfighter.io/ob/api/venues/TESTEX/stocks/FOOBAR/orders
 
-		URIBuilder uriBuilder = new URIBuilder();
 		URI uri = uriBuilder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs)
 				.setFragment("orders").build();
 
@@ -160,7 +119,7 @@ public class StockfighterService implements IStockFighterService {
 					+ " milliseconds to fulfill request.");
 
 			if (httpResponse.getStatusLine().getStatusCode() != 200) {
-				throw new RuntimeException(
+				throw new FailedStatusCode(
 						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
 			}
 
@@ -180,38 +139,17 @@ public class StockfighterService implements IStockFighterService {
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		QuoteResponse quote = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
 
 		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
 		nameValuePairs.add(new BasicNameValuePair("venues", venue));
 		nameValuePairs.add(new BasicNameValuePair("stocks", stock));
 
-		final URIBuilder builder = new URIBuilder();
-		URI uri = builder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs)
+		URI uri = uriBuilder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs)
 				.setFragment("quote").build();
 
 		HttpGet httpGet = new HttpGet(encodeURI(uri));
 
-		try {
-			Date sentDate = new Date();
-			slf4jLogger.info("POST: Requesting Quote information. " + sentDate.toString());
-
-			Date receiveDate = new Date();
-			httpResponse = httpClient.execute(httpGet);
-			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
-					+ " milliseconds to fulfill request.");
-
-			if (httpResponse.getStatusLine().getStatusCode() != 200) {
-				throw new RuntimeException(
-						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
-			}
-
-		} catch (ClientProtocolException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		httpResponse = executeGet(httpGet);
 
 		quote = (QuoteResponse) parseReponse(httpResponse, QuoteResponse.class);
 
@@ -221,34 +159,12 @@ public class StockfighterService implements IStockFighterService {
 	public boolean getHearBeat() throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		HeartbeatResponse heartbeat = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
-		final URIBuilder builder = new URIBuilder();
-		URI uri = builder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).setFragment("heartbeat").build();
+
+		URI uri = uriBuilder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).setFragment("heartbeat").build();
 
 		HttpGet httpGet = new HttpGet(encodeURI(uri));
 
-		try {
-			Date sentDate = new Date();
-			slf4jLogger.info("POST: Requesting hearbeat information. " + sentDate.toString());
-
-			Date receiveDate = new Date();
-			httpResponse = httpClient.execute(httpGet);
-			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
-					+ " milliseconds to fulfill request.");
-
-			if (httpResponse.getStatusLine().getStatusCode() != 200) {
-				throw new RuntimeException(
-						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
-			}
-
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		httpResponse = executeGet(httpGet);
 
 		heartbeat = (HeartbeatResponse) parseReponse(httpResponse, HeartbeatResponse.class);
 
@@ -260,42 +176,16 @@ public class StockfighterService implements IStockFighterService {
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		VenueResponse venueResponse = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
 
 		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
 		nameValuePairs.add(new BasicNameValuePair("venues", venue));
 
-		final URIBuilder builder = new URIBuilder();
-		URI uri = builder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs)
+		URI uri = uriBuilder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs)
 				.setFragment("heartbeat").build();
 
 		HttpGet httpGet = new HttpGet(encodeURI(uri));
 
-		// https://api.stockfighter.io/ob/api/venues/:venue/heartbeat
-		// https://api.stockfighter.io/ob/api/venues/TESTEX/heartbeat HTTP/1.1
-
-		try {
-			Date sentDate = new Date();
-			slf4jLogger.info("POST: Requesting status of a venue at: " + sentDate.toString());
-
-			Date receiveDate = new Date();
-			httpResponse = httpClient.execute(httpGet);
-			slf4jLogger
-					.info("RESPONSE: Received in " + (receiveDate.getTime() - sentDate.getTime()) + " milliseconds.");
-
-			if (httpResponse.getStatusLine().getStatusCode() != 200) {
-				throw new RuntimeException(
-						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
-			}
-
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		executeGet(httpGet);
 
 		venueResponse = (VenueResponse) parseReponse(httpResponse, VenueResponse.class);
 
@@ -307,15 +197,12 @@ public class StockfighterService implements IStockFighterService {
 			throws URISyntaxException, JsonGenerationException, JsonMappingException, IOException {
 
 		OrderbookResponse orderbook = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
 
 		List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
 		nameValuePairs.add(new BasicNameValuePair("venues", venue));
 		nameValuePairs.add(new BasicNameValuePair("stocks", stock));
 
-		final URIBuilder builder = new URIBuilder();
-		URI uri = builder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs).build();
+		URI uri = uriBuilder.setScheme(SCHEMA).setHost(HOST).setPath(PATH).addParameters(nameValuePairs).build();
 
 		HttpGet httpGet = new HttpGet(encodeURI(uri));
 
@@ -330,7 +217,7 @@ public class StockfighterService implements IStockFighterService {
 					+ " milliseconds to fulfill request.");
 
 			if (httpResponse.getStatusLine().getStatusCode() != 200) {
-				throw new RuntimeException(
+				throw new FailedStatusCode(
 						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
 			}
 
@@ -351,8 +238,6 @@ public class StockfighterService implements IStockFighterService {
 	public void testCancel() throws JsonGenerationException, JsonMappingException, IOException {
 
 		CancelResponse cancel = null;
-		HttpResponse httpResponse = null;
-		CloseableHttpClient httpClient = getHttpClient();
 		HttpDelete httpDelete = new HttpDelete("https://api.stockfighter.io/ob/api/venues/ROBUST/stocks/ROBO/orders/1");
 
 		try {
@@ -364,7 +249,7 @@ public class StockfighterService implements IStockFighterService {
 
 			if (httpResponse.getStatusLine().getStatusCode() != 200) {
 				slf4jLogger.error("Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
-				throw new RuntimeException(
+				throw new FailedStatusCode(
 						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
 			} else {
 				slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
@@ -386,11 +271,80 @@ public class StockfighterService implements IStockFighterService {
 
 	}
 
+	private HttpResponse executeGet(HttpGet httpGet) {
+
+		try {
+			Date sentDate = new Date();
+			slf4jLogger.info("Get method: >>>" + Thread.currentThread().getStackTrace()[2].getMethodName()
+					+ "<<< executed at " + sentDate.toString());
+
+			Date receiveDate = new Date();
+			httpResponse = httpClient.execute(httpGet);
+			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+					+ " milliseconds to fulfill request.");
+
+			if (httpResponse.getStatusLine().getStatusCode() != 200) {
+				throw new FailedStatusCode(
+						"Failed : HTTP error code : " + httpResponse.getStatusLine().getStatusCode());
+			}
+
+		} catch (ClientProtocolException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return httpResponse;
+	}
+
+	private HttpResponse executePost(HttpPost post) {
+		HttpResponse httpResponseLocal = null;
+
+		try {
+			Date sentDate = new Date();
+			slf4jLogger.info("POST method: >>>" + Thread.currentThread().getStackTrace()[2].getMethodName()
+					+ "<<< executed at " + sentDate.toString());
+
+			Date receiveDate = new Date();
+			httpResponseLocal = httpClient.execute(post);
+			slf4jLogger.info("Response received. It took " + (receiveDate.getTime() - sentDate.getTime())
+					+ " milliseconds to fulfill request.");
+
+			if (httpResponseLocal.getStatusLine().getStatusCode() != 200) {
+				throw new FailedStatusCode(
+						"Failed : HTTP error code : " + httpResponseLocal.getStatusLine().getStatusCode());
+			}
+
+		} catch (ClientProtocolException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return httpResponseLocal;
+	}
+
+	private static String buildPathProperty(LevelNames levelNames, LevelControl levelControl, String instanceID,
+			String path) {
+		switch (levelControl) {
+		case START:
+			path = path + LEVELS + levelNames.name().toLowerCase();
+			break;
+		case STOP:
+		case RESTART:
+		case RESUME:
+			path = path + INSTANCES + instanceID + "/" + levelControl.name().toLowerCase();
+			break;
+		default:
+			break;
+		}
+		return path;
+	}
+
 	private static String encodeURI(URI uri) {
 
 		return StringUtils.replaceEach(uri.toString(), new String[] { "#", "?", "=", "&" },
 				new String[] { "/", "/", "/", "/" });
-
 	}
 
 	private static IEntityClass parseReponse(HttpResponse httpResponse, Class<? extends IEntityClass> clazz)
